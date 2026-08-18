@@ -77,7 +77,7 @@ Runs the final augmented model against the held-out **Testing** directory.
 - Per-class `classification_report` (precision, recall, F1)
 - Confusion matrix heatmap
 
-**Result: ✅ 99.39% Test Accuracy**
+**Result: ✅ 95.39% Test Accuracy**
 
 ---
 
@@ -143,9 +143,9 @@ Randomly selects an image from the test set, runs inference, and displays the or
 
 | Model Version       | Val Accuracy |
 |---------------------|-------------|
-| Base (train.py)     | ~96–97%     |
-| Fine-tuned          | ~98%        |
-| Augmented (final)   | **99.39%**  |
+| Base (train.py)     | ~92–93%     |
+| Fine-tuned          | ~94%        |
+| Augmented (final)   | **95.39%**  |
 
 ---
 

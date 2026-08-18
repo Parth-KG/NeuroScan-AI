@@ -1,6 +1,6 @@
 # 🧠 NeuroScan AI — Brain Tumor Detection
 
-> An AI-powered MRI brain scan classifier built with EfficientNet-B0, achieving **99.39% test accuracy** across four diagnostic categories. Includes Grad-CAM explainability and an interactive Streamlit dashboard.
+> An AI-powered MRI brain scan classifier built with EfficientNet-B0, achieving **95.39% test accuracy** across four diagnostic categories. Includes Grad-CAM explainability and an interactive Streamlit dashboard.
 
 ---
 

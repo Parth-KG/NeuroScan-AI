@@ -120,7 +120,7 @@ with st.sidebar:
             ">
                 <strong style="display: block; margin-bottom: 8px;">ℹ️ Model Info</strong>
                 Architecture: EfficientNet-B0<br>
-                Accuracy: 99.39%<br>
+                Accuracy: 95.19%<br>
                 Training: Augmented Data
             </div>
         """, unsafe_allow_html=True)

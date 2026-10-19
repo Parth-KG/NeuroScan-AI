@@ -81,7 +81,7 @@ def evaluate():
     fig, ax = plt.subplots(figsize=(8, 8))
     disp.plot(cmap='Blues', ax=ax, xticks_rotation=45)
     plt.title(f"Confusion Matrix (Acc: {accuracy:.2f}%)")
-    plt.tight_layout()
+    plt.savefig("assets/ConfusionMatrix.png", dpi=150)
     plt.show()
 
 if __name__ == "__main__":

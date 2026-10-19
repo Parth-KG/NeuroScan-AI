@@ -86,10 +86,12 @@ def load_model():
     return model, DEVICE
 
 def load_lottieurl(url):
-    r = requests.get(url)
-    if r.status_code != 200:
+    try:
+        r = requests.get(url, timeout=5)
+        r.raise_for_status()
+        return r.json()
+    except (requests.RequestException, ValueError):
         return None
-    return r.json()
 
 model, DEVICE = load_model()
 CLASSES = ['Glioma', 'Meningioma', 'No Tumor', 'Pituitary']

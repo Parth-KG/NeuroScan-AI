@@ -227,7 +227,7 @@ else:
         <div style="text-align: center; margin-top: 20px;">
             <h3>👋 Welcome to NeuroScan</h3>
             <p style="color: #888;">
-                This tool uses Deep Learning (EfficientNet) to detect brain tumors with 99.4% accuracy.<br>
+                This tool uses Deep Learning (EfficientNet) to detect brain tumors, with 95.19% accuracy on a held-out test set.<br>
                 Please upload an MRI scan from the <b>sidebar</b> to begin diagnostics.
             </p>
         </div>

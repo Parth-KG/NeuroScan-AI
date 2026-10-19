@@ -35,7 +35,7 @@ Evaluated on the held-out `Testing/` split of the dataset's deduplicated release
 
 Cohen's κ and MCC both sit near 0.94. Both discount the agreement chance alone would produce, and both still land close to the accuracy figure.
 
-> **Why not 99.39%?** An earlier version of this README reported 99.39% on the dataset's original split (5,712 training / 1,311 test images). That split has near-duplicate images on both sides of the train/test boundary, which inflates test scores. The deduplicated release removes repeated images, so 95.19% is the better number, but it is still not leakage-free (see Limitations). The confusion matrix in `assets/` is from that original-split run.
+> **Why not 99.39%?** An earlier version of this README reported 99.39% on the dataset's original split (5,712 training / 1,311 test images). That split has near-duplicate images on both sides of the train/test boundary, which inflates test scores. The deduplicated release removes repeated images, so 95.19% is the better number, but it is still not leakage-free (see Limitations).
 
 ### Screening performance — tumor vs. no tumor
 
@@ -61,16 +61,18 @@ Every one of the 400 healthy scans was correctly identified as healthy. No patie
 
 ### Where the errors actually are
 
-With 400 scans per class, the per-class recall figures resolve the 77 total errors as follows *(derived arithmetically from the table above)*:
+The confusion matrix shows where the 77 errors fall:
 
 | Class | Scans | Misclassified |
 |---|---|---|
 | Glioma | 400 | **68** |
 | Meningioma | 400 | 8 |
-| Pituitary | 400 | ~1 |
+| Pituitary | 400 | 1 |
 | No Tumor | 400 | 0 |
 
-**88% of every mistake the model makes is a glioma.** Meningioma's precision of 0.899 is the other side of the same coin: it absorbs roughly 44 false positives, most of them gliomas being reassigned. This is not a model that is uniformly 95% good — it is near-perfect on three classes and materially weaker on one.
+![Confusion matrix on the 1,600-scan test set](assets/ConfusionMatrix.png)
+
+**88% of every mistake the model makes is a glioma.** Meningioma's precision of 0.899 is the other side of the same coin: it absorbs 44 false positives, 43 of them gliomas. The other 25 missed gliomas were called *no tumor*. This is not a model that is uniformly 95% good — it is near-perfect on three classes and materially weaker on one.
 
 ### Baseline vs. final
 

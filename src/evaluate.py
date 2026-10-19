@@ -84,7 +84,6 @@ def evaluate():
     plt.tight_layout()
     plt.savefig("assets/ConfusionMatrix.png", dpi=150)
     plt.show()
-    plt.show()
 
 if __name__ == "__main__":
     evaluate()

@@ -15,8 +15,8 @@ def predict():
     # 1. SETUP
     DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     
-    # Path to the model we saved in the training step
-    MODEL_PATH = "models/brain_tumor_efficientnet.pth" 
+    # Final model from augmentedFinetune.py (the same one the Streamlit app uses)   
+    MODEL_PATH = "models/brain_tumor_efficientnet_augmented.pth"
     TEST_DIR = "./data/Testing"
 
     CLASSES = ['glioma', 'meningioma', 'notumor', 'pituitary']

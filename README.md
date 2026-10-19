@@ -1,6 +1,6 @@
 # 🧠 NeuroScan AI — Brain Tumor Detection
 
-> An MRI brain-scan classifier built on EfficientNet-B0, evaluated on a held-out set of 1,600 scans.
+> An MRI brain-scan classifier built on EfficientNet-B0, evaluated on the 1,600-scan held-out test set of the deduplicated Kaggle Brain Tumor MRI dataset.
 > **95.19% accuracy**, **macro F1 0.9509**, and — on the screening question of *is there a tumor at all* — **100% specificity with zero false positives**.
 > Includes Grad-CAM explainability and an interactive Streamlit dashboard.
 
@@ -21,7 +21,7 @@ The model uses transfer learning on a pretrained **EfficientNet-B0** backbone, f
 
 ## 📊 Results
 
-Evaluated on the held-out `Testing/` directory: **1,600 scans, 400 per class.**
+Evaluated on the held-out `Testing/` split of the dataset's deduplicated release: **1,600 scans, 400 per class.**
 
 | Metric | Value |
 |---|---|
@@ -33,7 +33,9 @@ Evaluated on the held-out `Testing/` directory: **1,600 scans, 400 per class.**
 | Matthews correlation (MCC) | 0.9374 |
 | Top-2 accuracy | 96.44% |
 
-Cohen's κ and MCC both sit near 0.94, which matters because they discount agreement that chance alone would produce — the accuracy figure is not being inflated by class balance.
+Cohen's κ and MCC both sit near 0.94. Both discount the agreement chance alone would produce, and both still land close to the accuracy figure.
+
+> **Why not 99.39%?** An earlier version of this README reported 99.39% on the dataset's original split (5,712 training / 1,311 test images). That split has near-duplicate images on both sides of the train/test boundary, which inflates test scores. The deduplicated release removes repeated images, so 95.19% is the better number, but it is still not leakage-free (see Limitations). The confusion matrix in `assets/` is from that original-split run.
 
 ### Screening performance — tumor vs. no tumor
 
@@ -77,7 +79,7 @@ With 400 scans per class, the per-class recall figures resolve the 77 total erro
 | Baseline (`train.py`) | 93.06% | 0.9296 |
 | **Augmented (`augmentedFinetune.py`) — final** | **95.19%** | **0.9509** |
 
-Heavy augmentation with a clean validation split bought **+2.13 accuracy points and +0.021 macro F1** over the baseline.
+The final stage adds **+2.13 accuracy points and +0.021 macro F1** over the baseline. That gain combines heavier augmentation with 10 more epochs at a lower learning rate, so it can't be credited to augmentation alone. Validation doesn't pick the checkpoint either: each script saves its last epoch.
 
 ---
 
@@ -93,7 +95,9 @@ Stated plainly, because the aggregate numbers hide them.
 
 **Top-2 accuracy is only 96.44%.** Just 1.25 points above top-1, meaning the correct label usually is not sitting in second place when the model gets it wrong — the errors are confident, not near-misses.
 
-**Single-source dataset, no external validation.** All training and test scans come from one Kaggle dataset. Performance on scans from different scanners, acquisition protocols, or patient populations is untested and should not be assumed.
+**The split is by image, not by patient.** The dataset's `Training/` and `Testing/` folders don't keep a patient's slices together, so slices from one patient can land on both sides. My follow-up audit, [neuroscan-ood](https://github.com/Parth-KG/neuroscan-ood), measures this on the source Figshare data: a patient-grouped split scores about 5.8 points lower than a slice-level one. Read 95.19% as an upper bound.
+
+**One dataset, no external validation.** All training and test scans come from one Kaggle dataset, itself a merge of the Figshare, SARTAJ and Br35H collections, and neuroscan-ood finds that most of SARTAJ's tumour images duplicate Figshare's. Performance on scans from different scanners, acquisition protocols, or patient populations is untested and should not be assumed.
 
 ---
 
@@ -101,23 +105,31 @@ Stated plainly, because the aggregate numbers hide them.
 
 ```
 NeuroScan-AI/
-│
-├── data/
-│   ├── Training/          # Training images (organized by class)
-│   └── Testing/           # Test images (organized by class)
-│
-├── models/
-│   ├── brain_tumor_efficientnet.pth            # Base trained model
-│   ├── brain_tumor_efficientnet_finetuned.pth  # Intermediate experiment
-│   └── brain_tumor_efficientnet_augmented.pth  # Final model (used in app)
-│
-├── train.py               # Initial training from pretrained EfficientNet-B0
-├── finetune.py            # Intermediate fine-tuning experiment
-├── augmentedFinetune.py   # Final training — heavy aug + clean val split
-├── evaluate.py            # Full evaluation with confusion matrix & report
-├── predict.py             # Single-image prediction with Grad-CAM
-└── app.py                 # Streamlit web application
+├── src/
+│   ├── train.py               # Stage 1: baseline from pretrained EfficientNet-B0
+│   ├── finetune.py            # Stage 2: intermediate experiment (not used in final)
+│   ├── augmentedFinetune.py   # Stage 3: final model — heavy aug + clean val split
+│   ├── evaluate.py            # Test accuracy, classification report, confusion matrix
+│   ├── predict.py             # Random test image → prediction + Grad-CAM
+│   └── app.py                 # Streamlit web application
+├── assets/                    # Screenshots and evaluation plots
+├── requirements.txt
+└── LICENSE
 ```
+
+Created on your machine, not committed:
+
+```
+data/
+├── Training/                  # Training images, one folder per class
+└── Testing/                   # Test images, one folder per class
+models/
+├── brain_tumor_efficientnet.pth            # Stage 1 (baseline)
+├── brain_tumor_efficientnet_finetuned.pth  # Stage 2
+└── brain_tumor_efficientnet_augmented.pth  # Stage 3 (final, used by app and predict)
+```
+
+Run every command from the repo root. The scripts read `./data/` and write `./models/` relative to where you run them.
 
 ---
 
@@ -126,20 +138,23 @@ NeuroScan-AI/
 ### Stage 1 — `train.py` *(baseline)*
 - Loads pretrained **EfficientNet-B0** from `timm` (ImageNet weights)
 - Replaces the classification head with a 4-class output layer
-- Trains for **5 epochs**, AdamW, LR 0.001, 80/20 train/val split
+- Trains for **5 epochs**, AdamW, LR 0.001, random 80/20 train/val split
+- Light augmentation (`RandomHorizontalFlip`, `RandomRotation(10)`), applied to both splits
 - Saves to `models/brain_tumor_efficientnet.pth`
 - **Result: 93.06% test accuracy, macro F1 0.9296**
 
 ### Stage 2 — `finetune.py` *(intermediate, not used in final)*
-- Continues from Stage 1 weights with light augmentation (`RandomHorizontalFlip`, `RandomRotation`)
+- Continues from Stage 1 weights with the same light augmentation
 - 10 epochs at LR 0.0001, `weight_decay=1e-4`
+- Normalises with mean/std 0.5 rather than the ImageNet statistics the other stages use
 - Kept in the repo for reference; superseded by Stage 3 and **not re-evaluated** under the current test protocol, so no comparable figure is reported
 
 ### Stage 3 — `augmentedFinetune.py` *(final model)*
 - Loads Stage 1 weights and applies **heavy augmentation** to training data:
   `RandomHorizontalFlip`, `RandomRotation(15)`, `RandomAffine`, `ColorJitter`
-- Validation kept **clean** (no augmentation) for honest evaluation
-- Deterministic index-based train/val split via `numpy`
+- 10 epochs at LR 0.0001, `weight_decay=1e-4`
+- Validation kept **clean** (no augmentation): an index-based 80/20 split via `numpy` gives the augmented training subset and the clean validation subset no images in common
+- The split is re-drawn on every run (no fixed seed) and independently of Stage 1's split, so most validation images were already trained on in Stage 1. Treat Stage 3 validation accuracy as optimistic; the test set is unaffected
 - Saves to `models/brain_tumor_efficientnet_augmented.pth`
 - **Result: 95.19% test accuracy, macro F1 0.9509**
 
@@ -153,9 +168,9 @@ NeuroScan-AI/
 | Parameters | 4,012,672 |
 | Checkpoint size | 16.35 MB |
 | Inference latency | 14.96 ms / image |
-| Devices | Apple MPS / CUDA / CPU |
+| Devices | Apple MPS or CPU (the scripts don't select CUDA) |
 
-Small enough to run comfortably on CPU — roughly 67 scans per second at the measured latency.
+Roughly 67 scans per second at that latency.
 
 ---
 
@@ -166,6 +181,8 @@ Both `predict.py` and `app.py` use **Gradient-weighted Class Activation Mapping*
 - Target layer: `model.conv_head` (final convolutional layer of EfficientNet-B0)
 - Highlights the regions of the MRI that most influenced the classification
 - Rendered as a color overlay on the original scan
+
+![Grad-CAM heatmap from the Streamlit app](assets/HeatMap.png)
 
 Given the glioma recall gap, the heatmaps are worth inspecting on any glioma-suspected scan rather than trusting the label alone.
 
@@ -183,8 +200,10 @@ An interactive dashboard for non-technical users.
 - Dark-themed, responsive UI
 
 ```bash
-streamlit run app.py
+streamlit run src/app.py
 ```
+
+The app loads `models/brain_tumor_efficientnet_augmented.pth`. Trained weights aren't committed, so run the training steps below first, or put your own checkpoint at that path.
 
 > Confidence scores are uncalibrated — see Limitations.
 
@@ -192,25 +211,28 @@ streamlit run app.py
 
 ## 📊 Evaluation — `evaluate.py`
 
-Runs the final augmented model against the held-out `Testing/` directory and reports overall accuracy, per-class `classification_report` (precision / recall / F1), and a confusion matrix heatmap.
+```bash
+python src/evaluate.py
+```
+
+Runs the final augmented model against the held-out `Testing/` directory and reports overall accuracy, per-class `classification_report` (precision / recall / F1), and a confusion matrix heatmap. The extra metrics in Results (test loss, ROC-AUC, κ, MCC, top-2, latency) aren't computed by the committed `evaluate.py` yet.
 
 ---
 
 ## 🛠️ Installation
 
 ```bash
-pip install torch torchvision timm streamlit streamlit-lottie \
-            pytorch-grad-cam scikit-learn matplotlib pillow requests
+pip install -r requirements.txt
 ```
 
 **Dataset:**
-Download the [Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset) from Kaggle and place it in `./data/` with `Training/` and `Testing/` subdirectories.
+Download the [Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset) from Kaggle and place it in `./data/` with `Training/` and `Testing/` subdirectories. Make sure you have the deduplicated version: 5,600 training and 1,600 test images, 400 per class in test. The original version (5,712 / 1,311) has near-duplicates across the split.
 
 **Train from scratch:**
 ```bash
-python train.py
-python augmentedFinetune.py
-python evaluate.py
+python src/train.py
+python src/augmentedFinetune.py
+python src/evaluate.py
 ```
 
 ---
@@ -218,10 +240,10 @@ python evaluate.py
 ## 🧪 Quick Prediction Test
 
 ```bash
-python predict.py
+python src/predict.py
 ```
 
-Selects a random image from the test set, runs inference, and displays the original scan alongside the Grad-CAM heatmap — color-coded green (correct) or red (incorrect).
+Picks a random image from the test set, runs the final model, and displays the original scan alongside the Grad-CAM heatmap — color-coded green (correct) or red (incorrect).
 
 ---
 
@@ -231,10 +253,16 @@ Selects a random image from the test set, runs inference, and displays the origi
 |---|---|
 | Model | EfficientNet-B0 (`timm`) |
 | Framework | PyTorch |
-| Explainability | Grad-CAM (`pytorch-grad-cam`) |
+| Explainability | Grad-CAM (`grad-cam` package) |
 | UI | Streamlit |
 | Data | `torchvision.datasets.ImageFolder` |
-| Hardware | Apple MPS / CUDA / CPU |
+| Hardware | Apple MPS / CPU |
+
+---
+
+## 📄 License
+
+MIT — see [LICENSE](LICENSE).
 
 ---
 

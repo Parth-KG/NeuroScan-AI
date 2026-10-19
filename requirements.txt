@@ -1,0 +1,12 @@
+torch
+torchvision
+timm
+streamlit
+streamlit-lottie
+grad-cam
+scikit-learn
+matplotlib
+numpy
+pillow
+opencv-python
+requests
